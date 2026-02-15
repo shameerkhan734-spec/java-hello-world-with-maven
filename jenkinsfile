@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'Maven'        // Make sure Maven is configured in Jenkins Global Tool Config
+        jdk 'JDK'            // Make sure JDK is configured
+    }
+
+    environment {
+        APP_NAME = "jb-hello-world-maven"
+    }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                git branch: 'master',
+                url: 'https://github.com/shameerkhan734-spec/java-hello-world-with-maven.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Test Report') {
+            steps {
+                junit allowEmptyResults: true,
+                      testResults: '**/target/surefire-reports/*.xml'
+            }
+        }
+
+        stage('Archive Artifact') {
+            steps {
+                archiveArtifacts artifacts: 'target/*.jar',
+                                 fingerprint: true
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Build Successful!"
+        }
+        failure {
+            echo "❌ Build Failed!"
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
