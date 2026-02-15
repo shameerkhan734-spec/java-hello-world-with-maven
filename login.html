@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="login()">Test Login</button>
+<script>
+function login() {
+  fetch("https://l1dolhx1ha.execute-api.us-east-1.amazonaws.com/prod/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      email: "user@gmail.com",
+      password: "12345"
+    })
+  })
+  .then(r => r.text())
+  .then(alert)
+  .catch(alert);
+}
+</script>
+</body>
+</html>
