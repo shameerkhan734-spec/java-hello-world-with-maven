@@ -1,0 +1,217 @@
+import json
+import pymysql
+
+# ======= CHANGE THESE TO YOUR RDS SETTINGS =======
+RDS_HOST = "student-db.cs9s8mm8s171.us-east-1.rds.amazonaws.com"
+RDS_USER = "admin"
+RDS_PASSWORD = "Admin123"
+RDS_DB = "student-db"
+# ================================================
+
+HTML_PAGE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register & Login</title>
+    <style>
+        body { font-family: Arial; background:#f4f4f4; }
+        .container { width: 350px; margin: 50px auto; background:white; padding:20px; border-radius:8px; }
+        input, button { width:100%; padding:8px; margin:5px 0; }
+        .box { border:1px solid #ddd; padding:15px; margin-bottom:15px; border-radius:6px; }
+        h3 { margin-top:0; }
+        #reg_msg, #login_msg { font-weight:bold; margin-top:10px; }
+        button { background:#007bff; color:white; border:none; cursor:pointer; border-radius:4px; }
+        button:hover { background:#0056b3; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="box">
+<h3>Register</h3>
+<input id="r_name" placeholder="Name">
+<input id="r_email" placeholder="Email">
+<input id="r_course" placeholder="Course">
+<input id="r_pass" type="password" placeholder="Password">
+<button onclick="registerUser()">Register</button>
+<p id="reg_msg"></p>
+</div>
+
+<div class="box">
+<h3>Login</h3>
+<input id="l_email" placeholder="Email">
+<input id="l_pass" type="password" placeholder="Password">
+<button onclick="loginUser()">Login</button>
+<p id="login_msg"></p>
+</div>
+
+</div>
+
+<script>
+const apiUrl = window.location.href;
+
+function registerUser(){
+    fetch(apiUrl, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            action: "register",
+            name: r_name.value,
+            email: r_email.value,
+            course: r_course.value,
+            password: r_pass.value
+        })
+    })
+    .then(r=>r.json())
+    .then(d=>reg_msg.innerText = d.message)
+    .catch(e=>reg_msg.innerText = "Error: " + e);
+}
+
+function loginUser(){
+    fetch(apiUrl, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            action: "login",
+            email: l_email.value,
+            password: l_pass.value
+        })
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        if(d.name){
+            login_msg.innerText = "Welcome " + d.name + " | Course: " + d.course;
+        } else {
+            login_msg.innerText = d.message;
+        }
+    })
+    .catch(e=>login_msg.innerText = "Error: " + e);
+}
+</script>
+
+</body>
+</html>
+"""
+
+def get_db_connection():
+    return pymysql.connect(
+        host=RDS_HOST,
+        user=RDS_USER,
+        password=RDS_PASSWORD,
+        database=RDS_DB,
+        cursorclass=pymysql.cursors.DictCursor,
+        connect_timeout=5
+    )
+
+def lambda_handler(event, context):
+
+    method = event.get("httpMethod")
+
+    # --------- Show HTML in Browser ---------
+    if method == "GET":
+        return {
+            "statusCode": 200,
+            "headers": {"Content-Type": "text/html", "Access-Control-Allow-Origin": "*"},
+            "body": HTML_PAGE
+        }
+
+    # --------- Handle CORS Preflight ---------
+    if method == "OPTIONS":
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type"
+            },
+            "body": ""
+        }
+
+    # --------- Handle POST (Register/Login) ---------
+    if method == "POST":
+        try:
+            body = json.loads(event["body"])
+            action = body.get("action")  # "register" or "login"
+
+            connection = get_db_connection()
+            cursor = connection.cursor()
+
+            # ---------- REGISTER ----------
+            if action == "register":
+                name = body.get("name")
+                email = body.get("email")
+                course = body.get("course")
+                password = body.get("password")
+
+                if not all([name, email, course, password]):
+                    return {
+                        "statusCode": 400,
+                        "headers": {"Access-Control-Allow-Origin": "*"},
+                        "body": json.dumps({"message": "Missing required fields"})
+                    }
+
+                cursor.execute(
+                    "INSERT INTO register (name, email, course, password) VALUES (%s,%s,%s,%s)",
+                    (name, email, course, password)
+                )
+                connection.commit()
+                cursor.close()
+                connection.close()
+
+                return {
+                    "statusCode": 200,
+                    "headers": {"Access-Control-Allow-Origin": "*"},
+                    "body": json.dumps({"message": "Registered Successfully"})
+                }
+
+            # ---------- LOGIN ----------
+            elif action == "login":
+                email = body.get("email")
+                password = body.get("password")
+
+                cursor.execute(
+                    "SELECT name, course FROM register WHERE email=%s AND password=%s",
+                    (email, password)
+                )
+                user = cursor.fetchone()
+                cursor.close()
+                connection.close()
+
+                if user:
+                    return {
+                        "statusCode": 200,
+                        "headers": {"Access-Control-Allow-Origin": "*"},
+                        "body": json.dumps({
+                            "message": "Login Successful",
+                            "name": user["name"],
+                            "course": user["course"]
+                        })
+                    }
+                else:
+                    return {
+                        "statusCode": 401,
+                        "headers": {"Access-Control-Allow-Origin": "*"},
+                        "body": json.dumps({"message": "Invalid Email or Password"})
+                    }
+
+            else:
+                return {
+                    "statusCode": 400,
+                    "headers": {"Access-Control-Allow-Origin": "*"},
+                    "body": json.dumps({"message": "Invalid action"})
+                }
+
+        except Exception as e:
+            return {
+                "statusCode": 500,
+                "headers": {"Access-Control-Allow-Origin": "*"},
+                "body": json.dumps({"error": str(e)})
+            }
+
+    # ---------- Method not allowed ----------
+    return {
+        "statusCode": 405,
+        "headers": {"Access-Control-Allow-Origin": "*"},
+        "body": json.dumps({"message": "Method Not Allowed"})
+    }
