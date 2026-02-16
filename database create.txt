@@ -1,0 +1,126 @@
+You’re right — **`student-db` causes a syntax error in MySQL because of the hyphen (`-`)**.
+MySQL treats `-` as a minus operator unless the name is **quoted with backticks**.
+
+Below is the **correct and safe way** to fix everything.
+
+---
+
+# ? OPTION 1 — Keep the name `student-db` (Recommended for you)
+
+If you want to **keep your existing name**, you must **always use backticks** in MySQL.
+
+Run this in **MySQL Workbench**:
+
+```sql
+CREATE DATABASE IF NOT EXISTS `student-db`;
+```
+
+Then select it:
+
+```sql
+USE `student-db`;
+```
+
+Now create your table (run this exactly):
+
+```sql
+CREATE TABLE IF NOT EXISTS `register` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    course VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+Verify:
+
+```sql
+SHOW DATABASES;
+```
+
+You should see:
+
+```
+student-db
+```
+
+Then:
+
+```sql
+USE `student-db`;
+SHOW TABLES;
+```
+
+You should see:
+
+```
+register
+```
+
+---
+
+# ? Make sure your Lambda is STILL correct
+
+Your Lambda line is **already correct**:
+
+```python
+RDS_DB = "student-db"
+```
+
+(You do **not** use backticks in Python — only in MySQL.)
+
+---
+
+# ? Quick sanity test in Workbench
+
+```sql
+INSERT INTO `register` (name, email, course)
+VALUES ('Test', 'test@test.com', 'AWS');
+```
+
+Then:
+
+```sql
+SELECT * FROM `register`;
+```
+
+If you see the row ? your DB is ready.
+
+---
+
+# ?? (Optional) BETTER OPTION — Avoid future problems
+
+If you prefer, you can rename everything to avoid hyphens:
+
+1. Create a new database:
+
+```sql
+CREATE DATABASE student_db;
+```
+
+2. Then in Lambda change:
+
+```python
+RDS_DB = "student_db"
+```
+
+3. Create table in it:
+
+```sql
+USE student_db;
+
+CREATE TABLE register (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    course VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+# Now test your browser form again
+
+If you still get any error, paste it here — I’ll fix it precisely.
