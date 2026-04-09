@@ -1,0 +1,60 @@
+
+vi backend.tf
+terraform {
+  cloud {
+    organization = "your-org-name"
+
+    workspaces {
+      name = "my-workspace"
+    }
+  }
+}
+
+STEP 1: Create Terraform Cloud Account
+
+?? Go to: https://app.terraform.io
+
+Sign up / login
+Create Organization
+?? STEP 2: Create Workspace
+Click New Workspace
+Choose:
+?? Version Control Workflow (recommended) OR CLI
+
+For now we use CLI method (easy)
+
+?? STEP 3: Generate API Token
+Go to User Settings ? Tokens
+Create token
+?? STEP 4: Login from Server
+terraform login
+
+?? Paste your token
+
+?? STEP 5: Create Terraform Cloud Config
+vi backend.tf
+
+?? Paste:
+
+terraform {
+  cloud {
+    organization = "your-org-name"
+
+    workspaces {
+      name = "my-workspace"
+    }
+  }
+}
+
+?? Save: ESC + :wq
+
+?? STEP 6: Initialize Terraform
+terraform init
+
+?? It will migrate local state ? Terraform Cloud
+?? Type:
+
+yes
+?? STEP 7: Run Terraform
+terraform plan
+terraform apply
