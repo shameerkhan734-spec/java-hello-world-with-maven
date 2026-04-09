@@ -1,0 +1,109 @@
+
+Great — below is the **complete Terraform setup for a *Public Subnet*** (VPC + Internet Gateway + Route Table + Route Association + Public Subnet).
+
+---
+
+# ? **What makes a Subnet “Public”?**
+
+A subnet is public when it has:
+
+1. **Internet Gateway (IGW)** attached to the VPC
+2. **Route Table** with a route to `0.0.0.0/0 ? Internet Gateway`
+3. **Route Table associated with the Subnet**
+
+---
+
+# ?? **Complete Terraform Code — Public Subnet**
+
+```hcl
+provider "aws" {
+  region = "ap-south-1"
+}
+
+# 1?? Create VPC
+resource "aws_vpc" "my_vpc" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = "my-vpc"
+  }
+}
+
+# 2?? Create Internet Gateway
+resource "aws_internet_gateway" "my_igw" {
+  vpc_id = aws_vpc.my_vpc.id
+
+  tags = {
+    Name = "my-igw"
+  }
+}
+
+# 3?? Create Public Subnet
+resource "aws_subnet" "public_subnet" {
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "ap-south-1a"
+
+  # This makes instances get a public IP automatically
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "public-subnet-1"
+  }
+}
+
+# 4?? Create Route Table
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.my_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.my_igw.id
+  }
+
+  tags = {
+    Name = "public-route-table"
+  }
+}
+
+# 5?? Associate Route Table with Public Subnet
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_rt.id
+}
+```
+
+---
+
+# ?? Run these commands
+
+```
+terraform init
+terraform plan
+terraform apply
+```
+
+Type **yes** ? Your **Public Subnet** will be created.
+
+---
+
+# ? What you will get in AWS
+
+* VPC: `10.0.0.0/16`
+* Public Subnet: `10.0.1.0/24` in **ap-south-1a**
+* Internet Gateway attached
+* Route Table allowing internet access
+* Subnet associated with that Route Table
+* Instances launched here will **automatically get Public IP**
+
+---
+
+# ?? Want next?
+
+I can help you with:
+
+* Creating an **EC2 in this public subnet**
+* Adding **Security Group**
+* Creating a **Private Subnet + NAT Gateway**
+
+Just tell me ??
